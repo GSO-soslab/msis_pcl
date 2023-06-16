@@ -9,7 +9,12 @@ project(msis_pcl)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  roscpp
   std_msgs
+  cv_bridge
+  image_transport
+  sensor_msgs
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## System dependencies are found with CMake's conventions
@@ -117,6 +122,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  "/usr/include/opencv4/"
 )
 
 ## Declare a C++ library
@@ -203,3 +209,6 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(msis_pcl src/msis_pcl.cpp)
+target_link_libraries(msis_pcl ${catkin_LIBRARIES})
