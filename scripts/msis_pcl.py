@@ -9,7 +9,7 @@ class MSIS_PCL:
     def __init__(self) -> None:
         self.pub_pcl = rospy.Publisher("/msis/pointcloud", PointCloud2, queue_size=1)
         rospy.Subscriber("/wamv/msis/stonefish/data/image", Image, self.image_Cb, queue_size=1)
-        self.range_min= 0.5 
+        self.range_min= 0.5
         self.range_max= 50.0
         self.number_of_bins = 100
         self.prev = np.zeros((self.number_of_bins,360)).astype(np.float32)
@@ -23,7 +23,7 @@ class MSIS_PCL:
         self.height, self.width = self.diff.shape
         self.prev = self.current
         
-        msg = self.generate_pointclouds()
+        self.generate_pointclouds()
 
     def generate_pointclouds(self):
         pointcloud_msg = PointCloud2()
