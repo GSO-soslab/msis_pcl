@@ -29,6 +29,7 @@ class ImageConverter
   int width;
   cv::Mat prev = cv::Mat::zeros(this->number_of_bins, 360, CV_8UC1);
   cv::Mat last_img;
+  
 
 public:
   ImageConverter() : it_(nh_)
@@ -65,7 +66,7 @@ public:
     pcl_msg.header.frame_id = "wamv/msis";
 
     pcl_msg.height = 1;
-    pcl_msg.width = 1;//this->height;
+    pcl_msg.width = this->height;
 
     sensor_msgs::PointField  fieldx, fieldy, fieldz;
     fieldx.name = "x";
@@ -91,14 +92,17 @@ public:
     pcl_msg.row_step = pcl_msg.point_step * pcl_msg.width;
     pcl_msg.data.resize(pcl_msg.width * pcl_msg.point_step);
 
-        
+    //x positions.
+    std::vector<float> x = this->linspace(this->range_min, this->range_max, this->number_of_bins);
+    
+    //Populate PointCloud 
     sensor_msgs::PointCloud2Iterator<float> iterX(pcl_msg, "x");
     sensor_msgs::PointCloud2Iterator<float> iterY(pcl_msg, "y");
     sensor_msgs::PointCloud2Iterator<float> iterZ(pcl_msg, "z");
 
     for (size_t i = 0; i < pcl_msg.width; ++i) {
         // Set the coordinates of each point
-        *iterX = 1;
+        *iterX = x[i];
         *iterY = 1;
         *iterZ = 0;
 
@@ -108,6 +112,21 @@ public:
         ++iterZ;
     }
     this->pub_pcl.publish(pcl_msg);
+    
+    for (auto f : x) std::cout << f << " ";
+    std::cout << std::endl;
+  }
+
+  //Linspace function
+  std::vector<float> linspace(float start, float end, size_t points){
+  std::vector<float> res(points);
+  float step = (end - start) / (points - 1);
+  size_t i = 0;
+  for (auto& e : res)
+  {
+    e = start + step * i++;
+  }
+  return res;
   }
 };
 
