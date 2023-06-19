@@ -10,6 +10,7 @@
 #include <sensor_msgs/PointField.h>
 #include <std_msgs/Header.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
+#include <cmath>
 
 class ImageConverter
 {
@@ -29,8 +30,10 @@ class ImageConverter
   int width;
   cv::Mat prev = cv::Mat::zeros(this->number_of_bins, 360, CV_8UC1);
   cv::Mat last_img;
+  cv::Mat diff;
+  std::vector<uchar> middle_intense;
+  int angle;
   
-
 public:
   ImageConverter() : it_(nh_)
   {
@@ -48,26 +51,35 @@ public:
       return;
     }
 
-    cv::Mat diff;
     cv::Mat curr_img = cv_ptr->image;
-    cv::absdiff(last_img, curr_img, diff);
+    //Get current measurement
+    cv::absdiff(last_img, curr_img, this->diff);
+    cv::cvtColor(this->diff, this->diff, CV_BGR2GRAY);
     last_img = curr_img;
-    cv::Size s=diff.size();
+    cv::Size s=this->diff.size();
     this->height = s.height;
     this->width  = s.width;
-    
     this->generate_pointclouds();
+    
   }
 
   void generate_pointclouds(){
     sensor_msgs::PointCloud2 pcl_msg;
+    
+    //Modifier to describe what the fields are.
+    sensor_msgs::PointCloud2Modifier modifier(pcl_msg);
+    modifier.setPointCloud2FieldsByString(1, "xyz");
+    
+    //Msg header
     pcl_msg.header = std_msgs::Header();
     pcl_msg.header.stamp = ros::Time::now();
     pcl_msg.header.frame_id = "wamv/msis";
 
     pcl_msg.height = 1;
+    //No. of bins equal to the image height equal to the number of points
     pcl_msg.width = this->height;
 
+    //Describe the fields
     sensor_msgs::PointField  fieldx, fieldy, fieldz;
     fieldx.name = "x";
     fieldx.offset = 0;
@@ -95,26 +107,32 @@ public:
     //x positions.
     std::vector<float> x = this->linspace(this->range_min, this->range_max, this->number_of_bins);
     
-    //Populate PointCloud 
+    //Iterators for PointCloud msg
     sensor_msgs::PointCloud2Iterator<float> iterX(pcl_msg, "x");
     sensor_msgs::PointCloud2Iterator<float> iterY(pcl_msg, "y");
     sensor_msgs::PointCloud2Iterator<float> iterZ(pcl_msg, "z");
 
-    for (size_t i = 0; i < pcl_msg.width; ++i) {
-        // Set the coordinates of each point
-        *iterX = x[i];
-        *iterY = 1;
-        *iterZ = 0;
+    //Get the middle values
+    this->middle_intense = this->getMiddleRowPixelValues(this->diff);
+    for (int angle=0; angle < this->middle_intense.size();angle ++){
+      //Get current angle measurement
+      if (this->middle_intense[angle] != 0){
+        this->angle = angle;
+        for (size_t i = 0; i < pcl_msg.width; ++i) {
 
-        // Increment the iterators
-        ++iterX;
-        ++iterY;
-        ++iterZ;
+          *iterX = x[i] * std::cos(degreesToRadians(180-this->angle));
+          *iterY = x[i] * std::sin(degreesToRadians(180-this->angle));
+          *iterZ = 0;
+
+          // // Increment the iterators
+          ++iterX;
+          ++iterY;
+          ++iterZ;
+        }
+      }
     }
+
     this->pub_pcl.publish(pcl_msg);
-    
-    for (auto f : x) std::cout << f << " ";
-    std::cout << std::endl;
   }
 
   //Linspace function
@@ -127,6 +145,39 @@ public:
     e = start + step * i++;
   }
   return res;
+  }
+
+  //Function to get middle row pixel values
+  std::vector<uchar> getMiddleRowPixelValues(const cv::Mat& image) {
+      std::vector<uchar> pixelValues;
+
+      if (image.empty()) {
+          std::cerr << "Empty image." << std::endl;
+          return pixelValues;
+      }
+
+      if (image.channels() != 1) {
+          std::cerr << "Image is not grayscale." << std::endl;
+          return pixelValues;
+      }
+
+      int numRows = image.rows;
+      int numCols = image.cols;
+
+      int middleRow = numRows / 2;
+
+      cv::Mat middleRowPixels = image.row(middleRow);
+
+      for (int col = 0; col < numCols; ++col) {
+          pixelValues.push_back(middleRowPixels.at<uchar>(col));
+      }
+
+      return pixelValues;
+    }
+
+  //Fucntion to convert degrees to radians
+  double degreesToRadians(double degrees) {
+    return degrees * M_PI / 180.0;
   }
 };
 
