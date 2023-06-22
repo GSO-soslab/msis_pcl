@@ -19,7 +19,7 @@ class ImageConverter
   ros::NodeHandle nh_;
   image_transport::ImageTransport it_;
   image_transport::Subscriber image_sub_;
-  ros::Publisher pub_pcl =nh_.advertise<sensor_msgs::PointCloud2>("msis/pointcloud", 1);
+  ros::Publisher pub_pcl =nh_.advertise<sensor_msgs::PointCloud2>("msis/pointcloud/cpp", 1);
   
   //Sensor Info
   float range_min = 0.5;
