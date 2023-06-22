@@ -11,6 +11,7 @@
 #include <std_msgs/Header.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 #include <cmath>
+#include <algorithm>
 
 class ImageConverter
 {
@@ -28,10 +29,11 @@ class ImageConverter
   //Image stuff
   int height;
   int width;
-  cv::Mat prev = cv::Mat::zeros(this->number_of_bins, 360, CV_8UC1);
-  cv::Mat last_img;
+  cv::Mat prev;
+  cv::Mat current;
   cv::Mat diff;
   std::vector<uchar> middle_intense;
+  std::vector<uchar> intensities;
   int angle;
   
 public:
@@ -46,16 +48,16 @@ public:
     cv_bridge::CvImagePtr cv_ptr;
     cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
    
-    if(last_img.empty()) {
-      last_img = cv_ptr->image;
+    if(this->prev.empty()) {
+      this->prev = cv_ptr->image;
       return;
     }
 
-    cv::Mat curr_img = cv_ptr->image;
+    this->current = cv_ptr->image;
     //Get current measurement
-    cv::absdiff(last_img, curr_img, this->diff);
+    cv::absdiff(this->prev, this->current, this->diff);
     cv::cvtColor(this->diff, this->diff, CV_BGR2GRAY);
-    last_img = curr_img;
+    this->prev = this->current;
     cv::Size s=this->diff.size();
     this->height = s.height;
     this->width  = s.width;
@@ -68,8 +70,12 @@ public:
     
     //Modifier to describe what the fields are.
     sensor_msgs::PointCloud2Modifier modifier(pcl_msg);
-    modifier.setPointCloud2FieldsByString(1, "xyz");
-    
+    modifier.setPointCloud2Fields(4,
+    "x", 1, sensor_msgs::PointField::FLOAT32,
+    "y", 1, sensor_msgs::PointField::FLOAT32,
+    "z", 1, sensor_msgs::PointField::FLOAT32,
+    "intensity", 1, sensor_msgs::PointField::FLOAT32);
+
     //Msg header
     pcl_msg.header = std_msgs::Header();
     pcl_msg.header.stamp = ros::Time::now();
@@ -78,29 +84,10 @@ public:
     pcl_msg.height = 1;
     //No. of bins equal to the image height equal to the number of points
     pcl_msg.width = this->height;
+    pcl_msg.is_dense = true;
 
-    //Describe the fields
-    sensor_msgs::PointField  fieldx, fieldy, fieldz;
-    fieldx.name = "x";
-    fieldx.offset = 0;
-    fieldx.datatype = sensor_msgs::PointField::FLOAT32;
-    fieldx.count= 1;
-
-    fieldy.name="y";
-    fieldy.offset=4;
-    fieldy.datatype=sensor_msgs::PointField::FLOAT32;
-    fieldy.count = 1;
-
-    fieldz.name="z";
-    fieldz.offset=8;
-    fieldz.offset=sensor_msgs::PointField::FLOAT32;
-    fieldz.count=1;
-
-    pcl_msg.fields.push_back(fieldx);
-    pcl_msg.fields.push_back(fieldy);
-    pcl_msg.fields.push_back(fieldz);
-
-    pcl_msg.point_step = 12;
+    //Total number of bytes per point
+    pcl_msg.point_step = 16;
     pcl_msg.row_step = pcl_msg.point_step * pcl_msg.width;
     pcl_msg.data.resize(pcl_msg.width * pcl_msg.point_step);
 
@@ -111,6 +98,7 @@ public:
     sensor_msgs::PointCloud2Iterator<float> iterX(pcl_msg, "x");
     sensor_msgs::PointCloud2Iterator<float> iterY(pcl_msg, "y");
     sensor_msgs::PointCloud2Iterator<float> iterZ(pcl_msg, "z");
+    sensor_msgs::PointCloud2Iterator<float> iterIntensity(pcl_msg, "intensity");
 
     //Get the middle values
     this->middle_intense = this->getMiddleRowPixelValues(this->diff);
@@ -124,10 +112,17 @@ public:
           *iterY = x[i] * std::sin(degreesToRadians(180-this->angle));
           *iterZ = 0;
 
+          this->intensities = this->getColumnPixelValues(this->diff, this->angle);
+
+          *iterIntensity = static_cast<uchar>(this->intensities[i]);
+
+          // printVector(this->intensities);
+
           // // Increment the iterators
           ++iterX;
           ++iterY;
           ++iterZ;
+          ++iterIntensity;
         }
       }
     }
@@ -175,9 +170,39 @@ public:
       return pixelValues;
     }
 
+  std::vector<uchar> getColumnPixelValues(const cv::Mat& image, int columnIndex) {
+    // Check if the column index is within the image boundaries
+    if (columnIndex < 0 || columnIndex >= image.cols) {
+        throw std::out_of_range("Column index is out of range");
+    }
+
+    std::vector<uchar> pixelValues;
+    pixelValues.reserve(image.rows);
+
+    // Iterate over each row in the column and retrieve the pixel value
+    for (int rowIndex = image.rows; rowIndex > 0; --rowIndex) {
+        uchar pixelValue = image.at<uchar>(rowIndex, columnIndex);
+        pixelValues.push_back(pixelValue);
+    }
+
+    return pixelValues;
+}
+
   //Fucntion to convert degrees to radians
   double degreesToRadians(double degrees) {
     return degrees * M_PI / 180.0;
+  }
+
+  void printVector(const std::vector<uchar>& vec) {
+
+    for (const auto& element : vec) {
+        std::cout << static_cast<int>(element) << " ";
+    }
+    auto maxElement = std::max_element(vec.begin(), vec.end());
+    if (maxElement != vec.end()) {
+        std::cout << "The largest value is: " << static_cast<int>(*maxElement) << std::endl;
+    }
+    std::cout << std::endl;
   }
 };
 
