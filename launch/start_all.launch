@@ -1,0 +1,6 @@
+<launch>
+
+    <include file='$(find msis_pcl)/launch/start_cpp.launch'/>
+    <include file='$(find msis_pcl)/launch/start_python.launch'/>
+
+</launch>

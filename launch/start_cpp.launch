@@ -1,0 +1,9 @@
+<launch>
+        <!-- <include file="$(find wamv_bringup)/launch/bringup_simulation.launch"/> -->
+    <node name="testpcl_cpp" 
+            pkg="msis_pcl" 
+            type="msis_pcl"  
+            output="screen">
+    </node>
+     <node type="rviz" name="rviz2" pkg="rviz" args="-d $(find msis_pcl)/rviz/config.rviz" />
+</launch>
