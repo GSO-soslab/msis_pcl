@@ -7,7 +7,7 @@ from cv_bridge import CvBridge
 
 class MSIS_PCL:
     def __init__(self) -> None:
-        self.pub_pcl = rospy.Publisher("/msis/pointcloud", PointCloud2, queue_size=1)
+        self.pub_pcl = rospy.Publisher("/msis/pointcloud/python", PointCloud2, queue_size=1)
         rospy.Subscriber("/wamv/msis/stonefish/data/image", Image, self.image_Cb, queue_size=1)
         self.range_min= 0.5
         self.range_max= 50.0
