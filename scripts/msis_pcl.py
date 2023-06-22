@@ -18,7 +18,6 @@ class MSIS_PCL:
         self.pointcloud_msg = PointCloud2()
         # Set the header information
         self.pointcloud_msg.header = Header()
-        self.pointcloud_msg.header.stamp = rospy.Time.now()
         self.pointcloud_msg.header.frame_id = "wamv/msis"
 
         # Define the point fields (attributes)
