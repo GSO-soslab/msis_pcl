@@ -112,7 +112,7 @@ public:
           *iterY = x[i] * std::sin(degreesToRadians(180-this->angle));
           *iterZ = 0;
 
-          this->intensities = this->getColumnPixelValues(this->diff, this->angle);
+          this->intensities = this->getColumnPixelValues(this->current, this->angle);
 
           *iterIntensity = static_cast<uchar>(this->intensities[i]);
 
