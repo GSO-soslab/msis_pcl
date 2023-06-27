@@ -1,0 +1,13 @@
+pub_topic: "/msis/pointcloud/python"
+
+
+stonefish: 
+  enabled: False
+  range_min: 0.5
+  range_max: 50.0
+  number_of_bins: 100
+  frame: "wamv/msis"
+  sub_topic: "/wamv/msis/stonefish/data/image"
+
+ping360:
+  sub_topic: "/image"
