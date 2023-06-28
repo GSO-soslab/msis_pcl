@@ -8,6 +8,7 @@
 
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointField.h>
+#include <ping360_msgs/SonarEcho.h>
 #include <std_msgs/Header.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 #include <cmath>
@@ -19,18 +20,24 @@ class ImageConverter
   ros::NodeHandle nh_;
   image_transport::ImageTransport it_;
   image_transport::Subscriber image_sub_;
+  ros::Subscriber echo_sub_;
   ros::Publisher pub_pcl =nh_.advertise<sensor_msgs::PointCloud2>("msis/pointcloud/cpp", 1);
   
   //Sensor Info
-  float range_min = 0.5;
-  float range_max = 50.0;
-  float number_of_bins = 100;
-  
+  bool stonefish_enabled;
+  std::string sub_topic;
+  std::string frame_id;
+  float range_min;
+  float range_max;
+  float number_of_bins;
+  float angle_radians;
+
   //Image stuff
   int height;
   int width;
   cv::Mat prev;
   cv::Mat current;
+  cv::Mat current_gray;
   cv::Mat diff;
   std::vector<uchar> middle_intense;
   std::vector<uchar> intensities;
@@ -39,8 +46,82 @@ class ImageConverter
 public:
   ImageConverter() : it_(nh_)
   {
-    // Subscrive to input video feed
-    image_sub_ = it_.subscribe("/wamv/msis/stonefish/data/image", 1, &ImageConverter::imageCb, this);
+    nh_.getParam("stonefish/enabled", stonefish_enabled);
+    if (stonefish_enabled == true){
+      nh_.getParam("stonefish/sub_topic", sub_topic);
+      nh_.getParam("stonefish/frame", frame_id);
+      nh_.getParam("stonefish/range_min", range_min);
+      nh_.getParam("stonefish/range_max", range_max);
+      nh_.getParam("stonefish/number_of_bins", number_of_bins);
+      // Subscrive to input video feed
+      image_sub_ = it_.subscribe(sub_topic, 1, &ImageConverter::imageCb, this);
+      }
+    else{
+      nh_.getParam("ping360/sub_topic", sub_topic);
+      range_min = 0.75;
+      nh_.getParam("/ping360_sonar_node/Configuration/range", range_max);
+      if (range_max == 1){
+        number_of_bins = 666;
+      }
+      else{
+        number_of_bins = 1200;
+      }
+      nh_.getParam("/ping360_sonar_node/Driver/frame_id", frame_id);
+      echo_sub_ = nh_.subscribe(sub_topic, 1, &ImageConverter::echoCb, this);
+    }
+  }
+
+  void echoCb(const ping360_msgs::SonarEcho::Ptr& msg){
+    this->angle_radians = msg->angle;
+    this->intensities = msg->intensities;
+
+    sensor_msgs::PointCloud2 pcl_msg;
+    
+    //Modifier to describe what the fields are.
+    sensor_msgs::PointCloud2Modifier modifier(pcl_msg);
+    modifier.setPointCloud2Fields(4,
+    "x", 1, sensor_msgs::PointField::FLOAT32,
+    "y", 1, sensor_msgs::PointField::FLOAT32,
+    "z", 1, sensor_msgs::PointField::FLOAT32,
+    "intensity", 1, sensor_msgs::PointField::FLOAT32);
+
+    //Msg header
+    pcl_msg.header = std_msgs::Header();
+    pcl_msg.header.stamp = ros::Time::now();
+    pcl_msg.header.frame_id = this->frame_id;
+
+    pcl_msg.height = 1;
+    //No. of bins equal to the image height equal to the number of points
+    pcl_msg.width = this->number_of_bins;
+    pcl_msg.is_dense = true;
+
+    //Total number of bytes per point
+    pcl_msg.point_step = 16;
+    pcl_msg.row_step = pcl_msg.point_step * pcl_msg.width;
+    pcl_msg.data.resize(pcl_msg.width * pcl_msg.point_step);
+
+    //x positions.
+    std::vector<float> x = this->linspace(this->range_min, this->range_max, this->number_of_bins);
+    sensor_msgs::PointCloud2Iterator<float> iterX(pcl_msg, "x");
+    sensor_msgs::PointCloud2Iterator<float> iterY(pcl_msg, "y");
+    sensor_msgs::PointCloud2Iterator<float> iterZ(pcl_msg, "z");
+    sensor_msgs::PointCloud2Iterator<float> iterIntensity(pcl_msg, "intensity");
+
+    for (size_t i = 0; i < pcl_msg.width; ++i) {
+
+        *iterX = x[i] * std::cos(this->angle_radians);
+        *iterY = x[i] * std::sin(this->angle_radians);
+        *iterZ = 0;
+
+        *iterIntensity = static_cast<uchar>(this->intensities[i]);
+
+          // // Increment the iterators
+          ++iterX;
+          ++iterY;
+          ++iterZ;
+          ++iterIntensity;
+    }
+    this->pub_pcl.publish(pcl_msg);
   }
 
   void imageCb(const sensor_msgs::ImageConstPtr& msg)
@@ -58,6 +139,7 @@ public:
     cv::absdiff(this->prev, this->current, this->diff);
     cv::cvtColor(this->diff, this->diff, CV_BGR2GRAY);
     this->prev = this->current;
+    cv::cvtColor(this->current, this->current_gray,CV_BGR2GRAY);
     cv::Size s=this->diff.size();
     this->height = s.height;
     this->width  = s.width;
@@ -66,6 +148,7 @@ public:
   }
 
   void generate_pointclouds(){
+
     sensor_msgs::PointCloud2 pcl_msg;
     
     //Modifier to describe what the fields are.
@@ -79,7 +162,7 @@ public:
     //Msg header
     pcl_msg.header = std_msgs::Header();
     pcl_msg.header.stamp = ros::Time::now();
-    pcl_msg.header.frame_id = "wamv/msis";
+    pcl_msg.header.frame_id = this->frame_id;
 
     pcl_msg.height = 1;
     //No. of bins equal to the image height equal to the number of points
@@ -93,7 +176,6 @@ public:
 
     //x positions.
     std::vector<float> x = this->linspace(this->range_min, this->range_max, this->number_of_bins);
-    
     //Iterators for PointCloud msg
     sensor_msgs::PointCloud2Iterator<float> iterX(pcl_msg, "x");
     sensor_msgs::PointCloud2Iterator<float> iterY(pcl_msg, "y");
@@ -112,7 +194,7 @@ public:
           *iterY = x[i] * std::sin(degreesToRadians(180-this->angle));
           *iterZ = 0;
 
-          this->intensities = this->getColumnPixelValues(this->current, this->angle);
+          this->intensities = this->getColumnPixelValues(this->current_gray, this->angle);
 
           *iterIntensity = static_cast<uchar>(this->intensities[i]);
 
@@ -184,7 +266,7 @@ public:
         uchar pixelValue = image.at<uchar>(rowIndex, columnIndex);
         pixelValues.push_back(pixelValue);
     }
-
+    // printVector(pixelValues);
     return pixelValues;
 }
 

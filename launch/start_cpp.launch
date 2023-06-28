@@ -5,5 +5,6 @@
             type="msis_pcl"  
             output="screen">
     </node>
-     <node type="rviz" name="rviz2" pkg="rviz" args="-d $(find msis_pcl)/rviz/config.rviz" />
+     <rosparam command="load" file="$(find msis_pcl)/config/params.yaml"/>
+     <!-- <node type="rviz" name="rviz2" pkg="rviz" args="-d $(find msis_pcl)/rviz/config.rviz" /> -->
 </launch>

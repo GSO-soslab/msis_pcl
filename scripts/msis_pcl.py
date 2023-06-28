@@ -5,7 +5,6 @@ from ping360_msgs.msg import SonarEcho
 from std_msgs.msg import Header
 import numpy as np
 from cv_bridge import CvBridge
-import cv2
 
 class MSIS_PCL:
     def __init__(self) -> None:
