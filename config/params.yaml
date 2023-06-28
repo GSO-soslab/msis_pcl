@@ -1,6 +1,5 @@
 pub_topic: "/msis/pointcloud/python"
 
-
 stonefish: 
   enabled: False
   range_min: 0.5
@@ -10,4 +9,4 @@ stonefish:
   sub_topic: "/wamv/msis/stonefish/data/image"
 
 ping360:
-  sub_topic: "/image"
+  sub_topic: "/echo"

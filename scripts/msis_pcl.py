@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import rospy
 from sensor_msgs.msg import PointCloud2, PointField, Image
+from ping360_msgs.msg import SonarEcho
 from std_msgs.msg import Header
 import numpy as np
 from cv_bridge import CvBridge
@@ -22,22 +23,37 @@ class MSIS_PCL:
             sub_topic = rospy.get_param("stonefish/sub_topic")                    
             self.range_min= rospy.get_param("stonefish/range_min")
             self.range_max= rospy.get_param("stonefish/range_max")
-            self.number_of_bins = rospy.get_param("stonefish/number of bins")
+            self.number_of_bins = rospy.get_param("stonefish/number_of_bins")
+            
+            #PointCloud2 msg data
             self.pointcloud_msg.header.frame_id = rospy.get_param("stonefish/frame")
+
+            #Image containers
             self.prev = np.zeros((self.number_of_bins,360)).astype(np.float32)
             self.current = np.zeros((self.number_of_bins,360)).astype(np.float32)
+            
+            #Linearly spaced points from range_min to range_max, with number_of_bins
+            self.x = np.linspace(self.range_min,self.range_max,self.number_of_bins) 
+
+            rospy.Subscriber(sub_topic, Image, self.image_Cb, queue_size=1)
+
         else:
         #or ping360 sensor details
-            sub_topic = rospy.get_param("ping360/sub_topic", "/image")
+            sub_topic = rospy.get_param("ping360/sub_topic")
             self.range_min = 0.75 #Technical Documentation
             self.range_max = rospy.get_param("/ping360_sonar_node/Configuration/range")
-            self.number_of_bins = round(rospy.get_param("/ping360_sonar_node/Driver/image_size")/2)
+            
+            if self.range_max == 1:
+                self.number_of_bins = 666
+            else:
+                self.number_of_bins = 1200
+            
+            #Linearly spaced points from range_min to range_max, with number_of_bins
+            self.x = np.linspace(self.range_min,self.range_max,self.number_of_bins) 
             self.pointcloud_msg.header.frame_id = rospy.get_param("/ping360_sonar_node/Driver/frame_id")
-            self.prev = np.zeros((self.number_of_bins *2,self.number_of_bins*2)).astype(np.float32)
-            self.current = np.zeros((self.number_of_bins*2,self.number_of_bins*2)).astype(np.float32)
+            rospy.Subscriber(sub_topic, SonarEcho, self.echo_Cb, queue_size=1)
 
-        rospy.Subscriber(sub_topic, Image, self.image_Cb, queue_size=1)
-        
+
         # Define the point fields (attributes)
         fields = [
         PointField('x', 0, PointField.FLOAT32, 1),
@@ -49,8 +65,8 @@ class MSIS_PCL:
         self.pointcloud_msg.fields = fields
 
         # Set the point cloud dimensions (width and height)
-        self.pointcloud_msg.width = self.number_of_bins #HOW MANY POINTS in total (range)
         self.pointcloud_msg.height = 1
+        self.pointcloud_msg.width = self.number_of_bins #HOW MANY POINTS in total (range)
         self.pointcloud_msg.point_step = 4 * (len(fields))  # Each point occupies 16 bytes
 
         # Populate the point data
@@ -58,9 +74,22 @@ class MSIS_PCL:
         self.pointcloud_msg.row_step = self.pointcloud_msg.point_step * num_points
         self.pointcloud_msg.is_dense = True  # All points are valid
 
-        self.x = np.linspace(self.range_min,self.range_max,self.number_of_bins)
         #height is number of bins ie no of points. 4 attributes :x,y,z,intensity
-        self.points = np.zeros((self.number_of_bins,len(fields)), dtype=np.float32)
+        self.points = np.zeros((self.pointcloud_msg.width,len(fields)), dtype=np.float32)
+
+    def echo_Cb(self, msg):
+        self.angle = msg.angle #Radians
+        self.intensities = msg.intensities
+
+        for i in range(len(self.x)):
+            self.points[:][i][0] = self.x[i] * np.cos(self.angle)
+            self.points[:][i][1] = self.x[i] * np.sin(self.angle)
+            self.points[:][i][3] = self.intensities[i]
+        
+        self.pointcloud_msg.data = self.points.tobytes()
+        self.pointcloud_msg.header.stamp = rospy.Time.now()
+
+        self.pub_pcl.publish(self.pointcloud_msg)
 
     def image_Cb(self, msg):
         bridge = CvBridge()
@@ -69,16 +98,8 @@ class MSIS_PCL:
         self.diff = (self.prev - self.current)
         self.height, self.width = self.diff.shape
         self.prev = self.current
-        if self.stonefish_enabled:
-            self.generate_pointclouds_stonefish()
-        else:
-            self.generate_pointclouds_ping360()
+        self.generate_pointclouds_stonefish()
 
-    def generate_pointclouds_ping360(self):
-        #generating pointcloud using the radial image.
-        self.show_current_measurement()
-
-        
     def generate_pointclouds_stonefish(self):
         #Generating pointcloud using the rectangular image.
         row_values = self.get_middle_row_intensities(self.diff)
@@ -116,10 +137,6 @@ class MSIS_PCL:
         # Retrieve the intensities from the specified column
         column_intensities = image[:, column_index]
         return np.flip(column_intensities) 
-    
-    def show_current_measurement(self):
-        cv2.imshow("window",self.diff)
-        cv2.waitKey(1)
 
 if __name__ == "__main__":
     rospy.init_node("MSIS_to_PCL")
