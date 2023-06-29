@@ -44,9 +44,12 @@ class ImageConverter
   int angle;
   
 public:
+  //Constructor
   ImageConverter() : it_(nh_)
   {
     nh_.getParam("stonefish/enabled", stonefish_enabled);
+
+    //If StoneFish
     if (stonefish_enabled == true){
       nh_.getParam("stonefish/sub_topic", sub_topic);
       nh_.getParam("stonefish/frame", frame_id);
@@ -56,6 +59,8 @@ public:
       // Subscrive to input video feed
       image_sub_ = it_.subscribe(sub_topic, 1, &ImageConverter::imageCb, this);
       }
+
+    //Else Ping360
     else{
       nh_.getParam("ping360/sub_topic", sub_topic);
       range_min = 0.75;
@@ -67,10 +72,12 @@ public:
         number_of_bins = 1200;
       }
       nh_.getParam("/ping360_sonar_node/Driver/frame_id", frame_id);
+      //Sub to echo message
       echo_sub_ = nh_.subscribe(sub_topic, 1, &ImageConverter::echoCb, this);
     }
   }
 
+  //Ping360 Callback
   void echoCb(const ping360_msgs::SonarEcho::Ptr& msg){
     this->angle_radians = msg->angle;
     this->intensities = msg->intensities;
@@ -124,8 +131,10 @@ public:
     this->pub_pcl.publish(pcl_msg);
   }
 
+  //Stonefish Image callback (image processing)
   void imageCb(const sensor_msgs::ImageConstPtr& msg)
   {
+    //Cv Bridge
     cv_bridge::CvImagePtr cv_ptr;
     cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
    
@@ -137,16 +146,20 @@ public:
     this->current = cv_ptr->image;
     //Get current measurement
     cv::absdiff(this->prev, this->current, this->diff);
+
     cv::cvtColor(this->diff, this->diff, CV_BGR2GRAY);
     this->prev = this->current;
+    
     cv::cvtColor(this->current, this->current_gray,CV_BGR2GRAY);
     cv::Size s=this->diff.size();
     this->height = s.height;
     this->width  = s.width;
+    
     this->generate_pointclouds();
     
   }
 
+  //Generate Pointclouds from image
   void generate_pointclouds(){
 
     sensor_msgs::PointCloud2 pcl_msg;
@@ -214,17 +227,17 @@ public:
 
   //Linspace function
   std::vector<float> linspace(float start, float end, size_t points){
-  std::vector<float> res(points);
-  float step = (end - start) / (points - 1);
-  size_t i = 0;
-  for (auto& e : res)
-  {
-    e = start + step * i++;
-  }
-  return res;
+    std::vector<float> res(points);
+    float step = (end - start) / (points - 1);
+    size_t i = 0;
+    for (auto& e : res)
+    {
+      e = start + step * i++;
+    }
+    return res;
   }
 
-  //Function to get middle row pixel values
+  //get middle row pixel values
   std::vector<uchar> getMiddleRowPixelValues(const cv::Mat& image) {
       std::vector<uchar> pixelValues;
 
@@ -251,7 +264,8 @@ public:
 
       return pixelValues;
     }
-
+  
+  //get Column-wise pixel values.
   std::vector<uchar> getColumnPixelValues(const cv::Mat& image, int columnIndex) {
     // Check if the column index is within the image boundaries
     if (columnIndex < 0 || columnIndex >= image.cols) {
@@ -270,11 +284,12 @@ public:
     return pixelValues;
 }
 
-  //Fucntion to convert degrees to radians
+  //convert degrees to radians
   double degreesToRadians(double degrees) {
     return degrees * M_PI / 180.0;
   }
 
+  //display a vector
   void printVector(const std::vector<uchar>& vec) {
 
     for (const auto& element : vec) {
