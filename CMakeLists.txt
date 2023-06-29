@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   image_transport
   sensor_msgs
+  ping360_msgs
   ${OpenCV_INCLUDE_DIRS}
 )
 
