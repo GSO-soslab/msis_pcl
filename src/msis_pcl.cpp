@@ -65,13 +65,14 @@ public:
       nh_.getParam("ping360/sub_topic", sub_topic);
       range_min = 0.75;
       nh_.getParam("/ping360_sonar_node/Configuration/range", range_max);
+      range_max = 20;
       if (range_max == 1){
         number_of_bins = 666;
       }
       else{
         number_of_bins = 1200;
       }
-      nh_.getParam("/ping360_sonar_node/Driver/frame_id", frame_id);
+      nh_.getParam("ping360/frame", frame_id);
       //Sub to echo message
       echo_sub_ = nh_.subscribe(sub_topic, 1, &ImageConverter::echoCb, this);
     }
@@ -94,14 +95,13 @@ public:
 
     //Msg header
     pcl_msg.header = std_msgs::Header();
-    pcl_msg.header.stamp = ros::Time::now();
     pcl_msg.header.frame_id = this->frame_id;
 
     pcl_msg.height = 1;
-    //No. of bins equal to the image height equal to the number of points
+    //No. of bins equal to the image width equal to the number of points
     pcl_msg.width = this->number_of_bins;
     pcl_msg.is_dense = true;
-
+    pcl_msg.header.stamp = msg->header.stamp;
     //Total number of bytes per point
     pcl_msg.point_step = 16;
     pcl_msg.row_step = pcl_msg.point_step * pcl_msg.width;
@@ -115,7 +115,7 @@ public:
     sensor_msgs::PointCloud2Iterator<float> iterIntensity(pcl_msg, "intensity");
 
     for (size_t i = 0; i < pcl_msg.width; ++i) {
-
+        // std::cout<<x[i]<<std::endl;
         *iterX = x[i] * std::cos(this->angle_radians);
         *iterY = x[i] * std::sin(this->angle_radians);
         *iterZ = 0;
