@@ -63,9 +63,9 @@ public:
     //Else Ping360
     else{
       nh_.getParam("ping360/sub_topic", sub_topic);
-      range_min = 0.75;
+      range_min = 0;
       nh_.getParam("/ping360_sonar_node/Configuration/range", range_max);
-      range_max = 20;
+      range_max = 10;
       if (range_max == 1){
         number_of_bins = 666;
       }
@@ -129,6 +129,8 @@ public:
           ++iterIntensity;
     }
     this->pub_pcl.publish(pcl_msg);
+
+    //transform and Publish it in odom frame
   }
 
   //Stonefish Image callback (image processing)
