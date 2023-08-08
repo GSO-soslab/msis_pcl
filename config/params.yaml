@@ -9,4 +9,5 @@ stonefish:
   sub_topic: "/wamv/msis/stonefish/data/image"
 
 ping360:
-  sub_topic: "/echo"
+  sub_topic: "/alpha_rise/echo"
+  frame: "alpha_rise/ping360_link"
