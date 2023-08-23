@@ -5,6 +5,13 @@
             type="msis_pcl"  
             output="screen">
     </node>
-     <rosparam command="load" file="$(find msis_pcl)/config/params.yaml"/>
-     <!-- <node type="rviz" name="rviz2" pkg="rviz" args="-d $(find msis_pcl)/rviz/config.rviz" /> -->
+    <rosparam command="load" file="$(find msis_pcl)/config/params.yaml"/>
+     <!-- <node pkg="rosbag" type="play" name="player" output="screen" args="/home/soslab/auv_ws/bags/tank_test/whole.bag"/>
+     <node pkg="msis_pcl" type="tf_test.py" name="help"/>
+     
+     <node type="rviz" name="rviz2" pkg="rviz" args="-d $(find msis_pcl)/rviz/config.rviz" />
+     <node type="rviz" name="rviz3" pkg="rviz" args="-d $(find msis_pcl)/rviz/config2.rviz" /> -->
+
+
+     
 </launch>

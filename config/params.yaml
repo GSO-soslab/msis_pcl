@@ -6,6 +6,7 @@ stonefish:
   range_max: 50.0
   number_of_bins: 100
   frame: "wamv/msis"
+  # frame: "alpha_rise/ping360_link"
   sub_topic: "/wamv/msis/stonefish/data/image"
 
 ping360:

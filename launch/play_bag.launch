@@ -1,0 +1,22 @@
+<launch>     
+    <node name="testpcl_cpp" 
+            pkg="msis_pcl" 
+            type="msis_pcl"  
+            output="screen">
+    </node>
+    <rosparam command="load" file="$(find msis_pcl)/config/params.yaml"/>
+    <node type="rviz" name="rviz2" pkg="rviz" args="-d $(find msis_pcl)/rviz/config.rviz" />
+
+
+    <!--Test 1: The actual bag-->
+    <!-- <node pkg="rosbag" type="play" name="player" output="screen" args="/home/soslab/auv_ws/bags/tank_test/whole.bag"/> -->
+   
+    <!--Test 2: whole_minus_tf_static (no link between base_link adn ping360) && base-ping360.py -->    
+    <node pkg="rosbag" type="play" name="player" output="screen" args="/home/soslab/auv_ws/bags/tank_test/whole_minus_static_tf.bag"/>
+    <node pkg="msis_pcl" type="base-ping360.py" name="help"/>
+
+    <!--Test 3: Odom+Echo.bag && odom-base-ping360.py-->
+    <!-- <node pkg="rosbag" type="play" name="player" output="screen" args="/home/soslab/auv_ws/bags/tank_test/Odom+Echo.bag"/>
+     <node pkg="msis_pcl" type="odom-base-ping360.py" name="help"/> -->
+
+</launch>     
