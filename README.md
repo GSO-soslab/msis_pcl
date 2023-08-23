@@ -13,8 +13,6 @@ or <br>
 ## Nodes
 Both ```msis_pcl.py``` and ```msis_pcl```have the same application.
 
-```map.py``` takes in the image and converts to a costmap. (WIP)
-
 ## Launch Files
 
 ```start_cpp.launch``` launches cpp node, ```start_python.launch```, python node. <br>
