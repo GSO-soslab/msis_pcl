@@ -1,6 +1,6 @@
 <launch>
         <!-- <include file="$(find wamv_bringup)/launch/bringup_simulation.launch"/> -->
-    <node name="testpcl_cpp" 
+    <node name="msis_pcl" 
             pkg="msis_pcl" 
             type="msis_pcl"  
             output="screen">
