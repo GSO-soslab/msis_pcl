@@ -8,7 +8,9 @@ stonefish:
   # frame: "wamv/msis"
   frame: "alpha_rise/ping360_link"
   sub_topic: "/alpha_rise/msis/stonefish/data/image"
+  pub_topic: "/alpha_rise/msis/stonefish/data/pointcloud"
 
 ping360:
   sub_topic: "/alpha_rise/echo"
+  pub_topic: "/alpha_rise/msis/pointcloud"
   frame: "alpha_rise/ping360_link"

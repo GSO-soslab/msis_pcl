@@ -21,11 +21,12 @@ class ImageConverter
   image_transport::ImageTransport it_;
   image_transport::Subscriber image_sub_;
   ros::Subscriber echo_sub_;
-  ros::Publisher pub_pcl =nh_.advertise<sensor_msgs::PointCloud2>("msis/pointcloud/cpp", 1);
+  ros::Publisher pub_pcl;
   
   //Sensor Info
   bool stonefish_enabled;
   std::string sub_topic;
+  std::string pub_topic;
   std::string frame_id;
   float range_min;
   float range_max;
@@ -56,6 +57,8 @@ public:
       nh_.getParam("stonefish/range_min", range_min);
       nh_.getParam("stonefish/range_max", range_max);
       nh_.getParam("stonefish/number_of_bins", number_of_bins);
+      nh_.getParam("stonefish/pub_topic", pub_topic);
+      pub_pcl = nh_.advertise<sensor_msgs::PointCloud2>(pub_topic, 1);
       // Subscrive to input video feed
       image_sub_ = it_.subscribe(sub_topic, 1, &ImageConverter::imageCb, this);
       }
@@ -63,6 +66,8 @@ public:
     //Else Ping360
     else{
       nh_.getParam("ping360/sub_topic", sub_topic);
+      nh_.getParam("ping360/pub_topic", pub_topic);
+      pub_pcl = nh_.advertise<sensor_msgs::PointCloud2>(pub_topic, 1);
       range_min = 0;
       nh_.getParam("/ping360_sonar_node/Configuration/range", range_max);
       range_max = 10;
