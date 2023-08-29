@@ -1,14 +1,16 @@
 pub_topic: "/msis/pointcloud/python"
 
 stonefish: 
-  enabled: false
+  enabled: true
   range_min: 0.5
   range_max: 50.0
   number_of_bins: 100
-  frame: "wamv/msis"
-  # frame: "alpha_rise/ping360_link"
-  sub_topic: "/wamv/msis/stonefish/data/image"
+  # frame: "wamv/msis"
+  frame: "alpha_rise/ping360_link"
+  sub_topic: "/alpha_rise/msis/stonefish/data/image"
+  pub_topic: "/alpha_rise/msis/stonefish/data/pointcloud"
 
 ping360:
   sub_topic: "/alpha_rise/echo"
+  pub_topic: "/alpha_rise/msis/pointcloud"
   frame: "alpha_rise/ping360_link"
