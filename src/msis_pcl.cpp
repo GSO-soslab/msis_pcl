@@ -210,7 +210,7 @@ public:
         this->angle = angle;
         for (size_t i = 0; i < pcl_msg.width; ++i) {
           //Carve a smaller circle out. Needs to be a function of range based on the sonar.
-          if (x[i] >= 10){ 
+          if (x[i] >= 0){ 
           *iterX = x[i] * std::cos(degreesToRadians(180-this->angle));
           *iterY = x[i] * std::sin(degreesToRadians(180-this->angle));
           *iterZ = 0;
