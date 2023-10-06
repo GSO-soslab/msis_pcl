@@ -69,14 +69,6 @@ public:
       nh_.getParam("ping360/pub_topic", pub_topic);
       pub_pcl = nh_.advertise<sensor_msgs::PointCloud2>(pub_topic, 1);
       range_min = 0;
-      nh_.getParam("/ping360_sonar_node/Configuration/range", range_max);
-      range_max = 10;
-      if (range_max == 1){
-        number_of_bins = 666;
-      }
-      else{
-        number_of_bins = 1200;
-      }
       nh_.getParam("ping360/frame", frame_id);
       //Sub to echo message
       echo_sub_ = nh_.subscribe(sub_topic, 1, &ImageConverter::echoCb, this);
@@ -87,7 +79,14 @@ public:
   void echoCb(const ping360_msgs::SonarEcho::Ptr& msg){
     this->angle_radians = msg->angle;
     this->intensities = msg->intensities;
+    this->range_max = msg->range;
 
+    if (this->range_max == 1){
+        this->number_of_bins = 666;
+      }
+      else{
+        this->number_of_bins = 1200;
+      }
     sensor_msgs::PointCloud2 pcl_msg;
     
     //Modifier to describe what the fields are.
@@ -210,7 +209,7 @@ public:
         this->angle = angle;
         for (size_t i = 0; i < pcl_msg.width; ++i) {
           //Carve a smaller circle out. Needs to be a function of range based on the sonar.
-          if (x[i] >= 0){ 
+          if (x[i] >= 10){ 
           *iterX = x[i] * std::cos(degreesToRadians(180-this->angle));
           *iterY = x[i] * std::sin(degreesToRadians(180-this->angle));
           *iterZ = 0;
@@ -228,10 +227,10 @@ public:
           ++iterIntensity;
           }
           else {
-            *iterX = 0.0;
-            *iterY = 0.0;
-            *iterZ = 0;
-            *iterIntensity = 0.0;
+            *iterX = nan("");
+            *iterY = nan("");
+            *iterZ = nan("");
+            *iterIntensity = nan("");
             ++iterX;
             ++iterY;
             ++iterZ;
