@@ -1,10 +1,10 @@
 <launch>     
     <!--SONAR to PCL Node-->
-    <node name="pcl_conversion_node" 
+    <!-- <node name="pcl_conversion_node" 
             pkg="msis_pcl" 
             type="msis_pcl"  
             output="screen">
-    </node>
+    </node> -->
     <rosparam command="load" file="$(find msis_pcl)/config/params.yaml"/>
 
     <!--Rviz-->
@@ -13,14 +13,19 @@
     <node type="rviz" name="rviz" pkg="rviz" args="-d $(find msis_pcl)/rviz/compare.rviz" />
 
     <!--Bag file: whole_minus_tf_static (no link between base_link adn ping360) && base-ping360.py -->    
-    <node pkg="rosbag" type="play" name="player" args="-s 11 /home/soslab/auv_ws/bags/tank_test/whole_minus_static_tf.bag"/>
+    <!-- <node pkg="rosbag" type="play" name="player" args="-s 11 /home/soslab/auv_ws/bags/tank_test/whole_minus_static_tf.bag"/> -->
+    <node pkg="rosbag" type="play" name="player" args="-s 12 --clock /home/soslab/auv_ws/bags/tank_test/latest.bag"/>
+    
     <!--Adding the tf-->
-    <node pkg="msis_pcl" type="base-ping360.py" name="hard_code_tf_node"/>
+    <!-- <node pkg="msis_pcl" type="base-ping360.py" name="hard_code_tf_node"/> -->
 
     <!--PCL Processing node-->
-    <node pkg="pcl_proc" type="processing.py" name = "pcl_filter_node" output="screen"/>
+    <!-- <node pkg="pcl_proc" type="processing.py" name = "pcl_filter_node" output="screen"/> -->
 
     <!--PCL to LaserScan Node-->
     <include file="$(find pcl_proc)/launch/pcl_laserscan.launch"/>
+
+    <include file="$(find pcl_proc)/launch/costmap.launch"/>
+
 
 </launch>     
