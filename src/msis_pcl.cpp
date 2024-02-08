@@ -208,8 +208,6 @@ public:
       if (this->middle_intense[angle] != 0){
         this->angle = angle;
         for (size_t i = 0; i < pcl_msg.width; ++i) {
-          //Carve a smaller circle out. Needs to be a function of range based on the sonar.
-          if (x[i] >= 10){ 
           *iterX = x[i] * std::cos(degreesToRadians(180-this->angle));
           *iterY = x[i] * std::sin(degreesToRadians(180-this->angle));
           *iterZ = 0;
@@ -225,17 +223,6 @@ public:
           ++iterY;
           ++iterZ;
           ++iterIntensity;
-          }
-          else {
-            *iterX = nan("");
-            *iterY = nan("");
-            *iterZ = nan("");
-            *iterIntensity = nan("");
-            ++iterX;
-            ++iterY;
-            ++iterZ;
-            ++iterIntensity;
-          }
         }
       }
     }
