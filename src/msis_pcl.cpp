@@ -9,6 +9,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/PointField.h>
 #include <ping360_msgs/SonarEcho.h>
+#include <mvp_msgs/Float64Stamped.h>
 #include <std_msgs/Header.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 #include <cmath>
@@ -42,7 +43,7 @@ class ImageConverter
   cv::Mat diff;
   std::vector<uchar> middle_intense;
   std::vector<uchar> intensities;
-  int angle;
+  float angle;
   
 public:
   //Constructor
@@ -207,9 +208,10 @@ public:
       //Get current angle measurement
       if (this->middle_intense[angle] != 0){
         this->angle = angle;
+        // std::cout<<this->angle* 2*M_PI / 400.0 - M_PI<<std::endl;
         for (size_t i = 0; i < pcl_msg.width; ++i) {
-          *iterX = x[i] * std::cos(degreesToRadians(180-this->angle));
-          *iterY = x[i] * std::sin(degreesToRadians(180-this->angle));
+          *iterX = x[i] * std::cos((this->angle* 2*M_PI / 400.0 - M_PI));
+          *iterY = x[i] * std::sin((this->angle* 2*M_PI / 400.0 - M_PI));
           *iterZ = 0;
 
           this->intensities = this->getColumnPixelValues(this->current_gray, this->angle);
