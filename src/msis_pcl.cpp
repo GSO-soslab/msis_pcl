@@ -208,7 +208,7 @@ public:
       //Get current angle measurement
       if (this->middle_intense[angle] != 0){
         this->angle = angle;
-        std::cout<<this->angle* 2*M_PI / 400.0 - M_PI<<std::endl;
+        // std::cout<<this->angle* 2*M_PI / 400.0 - M_PI<<std::endl;
         for (size_t i = 0; i < pcl_msg.width; ++i) {
           *iterX = x[i] * std::cos((this->angle* 2*M_PI / 400.0 - M_PI));
           *iterY = x[i] * std::sin((this->angle* 2*M_PI / 400.0 - M_PI));
