@@ -1,11 +1,8 @@
 <launch>
+        <arg name="robot_name" default="alpha_rise"/>
         <!-- <include file="$(find wamv_bringup)/launch/bringup_simulation.launch"/> -->
-    <node name="msis_pcl" 
-            pkg="msis_pcl" 
-            type="msis_pcl"  
-            output="screen">
-    </node>
-    <rosparam command="load" file="$(find msis_pcl)/config/params.yaml"/>
+        <node ns="$(arg robot_name)" name="msis_pcl_node" pkg="msis_pcl"  type="msis_pcl"  output="screen"/>
+        <rosparam command="load" file="$(find msis_pcl)/config/params.yaml" ns="$(arg robot_name)"/>
      <!-- <node pkg="rosbag" type="play" name="player" output="screen" args="/home/soslab/auv_ws/bags/tank_test/whole.bag"/>
      <node pkg="msis_pcl" type="tf_test.py" name="help"/>
      
