@@ -49,16 +49,16 @@ public:
   //Constructor
   ImageConverter() : it_(nh_)
   {
-    nh_.getParam("~stonefish/enabled", stonefish_enabled);
+    nh_.getParam("stonefish/enabled", stonefish_enabled);
 
     //If StoneFish
     if (stonefish_enabled == true){
-      nh_.getParam("~stonefish/sub_topic", sub_topic);
-      nh_.getParam("~stonefish/frame", frame_id);
-      nh_.getParam("~stonefish/range_min", range_min);
-      nh_.getParam("~stonefish/range_max", range_max);
-      nh_.getParam("~stonefish/number_of_bins", number_of_bins);
-      nh_.getParam("~stonefish/pub_topic", pub_topic);
+      nh_.getParam("stonefish/sub_topic", sub_topic);
+      nh_.getParam("stonefish/frame", frame_id);
+      nh_.getParam("stonefish/range_min", range_min);
+      nh_.getParam("stonefish/range_max", range_max);
+      nh_.getParam("stonefish/number_of_bins", number_of_bins);
+      nh_.getParam("stonefish/pub_topic", pub_topic);
       pub_pcl = nh_.advertise<sensor_msgs::PointCloud2>(pub_topic, 1);
       // Subscrive to input video feed
       image_sub_ = it_.subscribe(sub_topic, 1, &ImageConverter::imageCb, this);
@@ -66,11 +66,11 @@ public:
 
     //Else Ping360
     else{
-      nh_.getParam("~ping360/sub_topic", sub_topic);
-      nh_.getParam("~ping360/pub_topic", pub_topic);
+      nh_.getParam("ping360/sub_topic", sub_topic);
+      nh_.getParam("ping360/pub_topic", pub_topic);
       pub_pcl = nh_.advertise<sensor_msgs::PointCloud2>(pub_topic, 1);
       range_min = 0;
-      nh_.getParam("~ping360/frame", frame_id);
+      nh_.getParam("ping360/frame", frame_id);
       //Sub to echo message
       echo_sub_ = nh_.subscribe(sub_topic, 1, &ImageConverter::echoCb, this);
     }
