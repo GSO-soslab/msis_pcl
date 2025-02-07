@@ -33,6 +33,8 @@ class ImageConverter
   float range_max;
   float number_of_bins;
   float angle_radians;
+  float cos_angle_radians;
+  float sin_angle_radians;
 
   //Image stuff
   int height;
@@ -79,6 +81,8 @@ public:
   //Ping360 Callback
   void echoCb(const ping360_msgs::SonarEcho::Ptr& msg){
     this->angle_radians = msg->angle;
+    this->cos_angle_radians =  std::cos(this->angle_radians);
+    this->sin_angle_radians =  std::sin(this->angle_radians);
     this->intensities = msg->intensities;
     this->range_max = msg->range;
 
@@ -121,8 +125,8 @@ public:
 
     for (size_t i = 0; i < pcl_msg.width; ++i) {
         // std::cout<<x[i]<<std::endl;
-        *iterX = x[i] * std::cos(this->angle_radians);
-        *iterY = x[i] * std::sin(this->angle_radians);
+        *iterX = x[i] * this->cos_angle_radians;
+        *iterY = x[i] * this->sin_angle_radians;
         *iterZ = 0;
 
         *iterIntensity = static_cast<uchar>(this->intensities[i]);
@@ -208,10 +212,12 @@ public:
       //Get current angle measurement
       if (this->middle_intense[angle] != 0){
         this->angle = angle;
+        this->cos_angle_radians = std::cos((this->angle* 2*M_PI / 400.0 - M_PI));
+        this->sin_angle_radians = std::sin((this->angle* 2*M_PI / 400.0 - M_PI));
         // std::cout<<this->angle* 2*M_PI / 400.0 - M_PI<<std::endl;
         for (size_t i = 0; i < pcl_msg.width; ++i) {
-          *iterX = x[i] * std::cos((this->angle* 2*M_PI / 400.0 - M_PI));
-          *iterY = x[i] * std::sin((this->angle* 2*M_PI / 400.0 - M_PI));
+          *iterX = x[i] * this->cos_angle_radians;
+          *iterY = x[i] * this->sin_angle_radians;
           *iterZ = 0;
 
           this->intensities = this->getColumnPixelValues(this->current_gray, this->angle);
