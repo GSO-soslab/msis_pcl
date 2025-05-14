@@ -1,28 +1,23 @@
-#include <ros/ros.h>
-
-#include <image_transport/image_transport.h>
-#include <cv_bridge/cv_bridge.h>
-#include <sensor_msgs/image_encodings.h>
+#include <rclcpp/rclcpp.hpp>
+#include <image_transport/image_transport.hpp>
+#include <cv_bridge/cv_bridge.hpp>
+#include <sensor_msgs/msg/image.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <ping360_msgs/msg/sonar_echo.hpp>
+#include <mvp_msgs/msg/float64_stamped.hpp>
+#include <std_msgs/msg/header.hpp>
 
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/PointField.h>
-#include <ping360_msgs/SonarEcho.h>
-#include <mvp_msgs/Float64Stamped.h>
-#include <std_msgs/Header.h>
-#include <sensor_msgs/point_cloud2_iterator.h>
 #include <cmath>
 #include <algorithm>
-
-class ImageConverter
-{
+class MSIS_PCL : public rclcpp::Node
+{ 
   //ROS Stuff
-  ros::NodeHandle nh_;
-  image_transport::ImageTransport it_;
   image_transport::Subscriber image_sub_;
-  ros::Subscriber echo_sub_;
-  ros::Publisher pub_pcl;
+  rclcpp::Subscription<ping360_msgs::msg::SonarEcho>::SharedPtr echo_sub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_pcl_;
   
   //Sensor Info
   bool stonefish_enabled;
@@ -31,7 +26,7 @@ class ImageConverter
   std::string frame_id;
   float range_min;
   float range_max;
-  float number_of_bins;
+  int number_of_bins;
   float angle_radians;
   float cos_angle_radians;
   float sin_angle_radians;
@@ -49,37 +44,54 @@ class ImageConverter
   
 public:
   //Constructor
-  ImageConverter() : it_(nh_)
+  MSIS_PCL(rclcpp::NodeOptions options = rclcpp::NodeOptions()) :
+    Node("msis_pcl", options)
   {
-    nh_.getParam("stonefish/enabled", stonefish_enabled);
+    //Declare param
+    this->declare_parameter<bool>("stonefish.enabled");
+    this->declare_parameter<std::string>("stonefish.sub_topic");
+    this->declare_parameter<std::string>("stonefish.frame");
+    this->declare_parameter<double>("stonefish.range_min");
+    this->declare_parameter<double>("stonefish.range_max");
+    this->declare_parameter<int>("stonefish.number_of_bins");
+    this->declare_parameter<std::string>("stonefish.pub_topic");
+    this->declare_parameter<std::string>("ping360.sub_topic");
+    this->declare_parameter<std::string>("ping360.pub_topic");
+    this->declare_parameter<std::string>("ping360.frame");
 
-    //If StoneFish
-    if (stonefish_enabled == true){
-      nh_.getParam("stonefish/sub_topic", sub_topic);
-      nh_.getParam("stonefish/frame", frame_id);
-      nh_.getParam("stonefish/range_min", range_min);
-      nh_.getParam("stonefish/range_max", range_max);
-      nh_.getParam("stonefish/number_of_bins", number_of_bins);
-      nh_.getParam("stonefish/pub_topic", pub_topic);
-      pub_pcl = nh_.advertise<sensor_msgs::PointCloud2>(pub_topic, 1);
-      // Subscrive to input video feed
-      image_sub_ = it_.subscribe(sub_topic, 1, &ImageConverter::imageCb, this);
-      }
+    //Get params
+    this->get_parameter("stonefish.enabled", stonefish_enabled);
 
+    if (stonefish_enabled){
+      this->get_parameter("stonefish.sub_topic", sub_topic);
+      this->get_parameter("stonefish.frame", frame_id);
+      this->get_parameter("stonefish.range_min", range_min);
+      this->get_parameter("stonefish.range_max", range_max);
+      this->get_parameter("stonefish.number_of_bins", number_of_bins);
+      this->get_parameter("stonefish.pub_topic", pub_topic);
+      // rmw_qos_profile_t custom_qos = rmw_qos_profile_default;
+      pub_pcl_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(pub_topic, 10);
+      image_sub_ = image_transport::create_subscription(this, sub_topic,
+        std::bind(&MSIS_PCL::imageCb, this, std::placeholders::_1), "raw");
+
+    }
     //Else Ping360
     else{
-      nh_.getParam("ping360/sub_topic", sub_topic);
-      nh_.getParam("ping360/pub_topic", pub_topic);
-      pub_pcl = nh_.advertise<sensor_msgs::PointCloud2>(pub_topic, 1);
+      this->get_parameter("ping360.sub_topic", sub_topic);
+      this->get_parameter("ping360.pub_topic", pub_topic);
+      this->get_parameter("ping360.frame", frame_id);
+      pub_pcl_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(pub_topic, 10);
       range_min = 0;
-      nh_.getParam("ping360/frame", frame_id);
       //Sub to echo message
-      echo_sub_ = nh_.subscribe(sub_topic, 1, &ImageConverter::echoCb, this);
+      echo_sub_ = this->create_subscription<ping360_msgs::msg::SonarEcho>(
+                  sub_topic,
+                  10,
+                  std::bind(&MSIS_PCL::echoCb, this, std::placeholders::_1));
     }
   }
 
   //Ping360 Callback
-  void echoCb(const ping360_msgs::SonarEcho::Ptr& msg){
+  void echoCb(const ping360_msgs::msg::SonarEcho::SharedPtr msg){
     this->angle_radians = msg->angle;
     this->cos_angle_radians =  std::cos(this->angle_radians);
     this->sin_angle_radians =  std::sin(this->angle_radians);
@@ -92,18 +104,18 @@ public:
       else{
         this->number_of_bins = 1200;
       }
-    sensor_msgs::PointCloud2 pcl_msg;
+    sensor_msgs::msg::PointCloud2 pcl_msg;
     
     //Modifier to describe what the fields are.
     sensor_msgs::PointCloud2Modifier modifier(pcl_msg);
     modifier.setPointCloud2Fields(4,
-    "x", 1, sensor_msgs::PointField::FLOAT32,
-    "y", 1, sensor_msgs::PointField::FLOAT32,
-    "z", 1, sensor_msgs::PointField::FLOAT32,
-    "intensity", 1, sensor_msgs::PointField::FLOAT32);
+    "x", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "intensity", 1, sensor_msgs::msg::PointField::FLOAT32);
 
     //Msg header
-    pcl_msg.header = std_msgs::Header();
+    pcl_msg.header = std_msgs::msg::Header();
     pcl_msg.header.frame_id = this->frame_id;
 
     pcl_msg.height = 1;
@@ -137,13 +149,13 @@ public:
           ++iterZ;
           ++iterIntensity;
     }
-    this->pub_pcl.publish(pcl_msg);
+    this->pub_pcl_->publish(pcl_msg);
 
     //transform and Publish it in odom frame
   }
 
   //Stonefish Image callback (image processing)
-  void imageCb(const sensor_msgs::ImageConstPtr& msg)
+  void imageCb(const sensor_msgs::msg::Image::ConstSharedPtr msg)
   {
     //Cv Bridge
     cv_bridge::CvImagePtr cv_ptr;
@@ -173,19 +185,19 @@ public:
   //Generate Pointclouds from image
   void generate_pointclouds(){
 
-    sensor_msgs::PointCloud2 pcl_msg;
+    sensor_msgs::msg::PointCloud2 pcl_msg;
     
     //Modifier to describe what the fields are.
     sensor_msgs::PointCloud2Modifier modifier(pcl_msg);
     modifier.setPointCloud2Fields(4,
-    "x", 1, sensor_msgs::PointField::FLOAT32,
-    "y", 1, sensor_msgs::PointField::FLOAT32,
-    "z", 1, sensor_msgs::PointField::FLOAT32,
-    "intensity", 1, sensor_msgs::PointField::FLOAT32);
+    "x", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "intensity", 1, sensor_msgs::msg::PointField::FLOAT32);
 
     //Msg header
-    pcl_msg.header = std_msgs::Header();
-    pcl_msg.header.stamp = ros::Time::now();
+    pcl_msg.header = std_msgs::msg::Header();
+    pcl_msg.header.stamp = this->get_clock()->now();
     pcl_msg.header.frame_id = this->frame_id;
 
     pcl_msg.height = 1;
@@ -235,7 +247,7 @@ public:
       }
     }
 
-    this->pub_pcl.publish(pcl_msg);
+    this->pub_pcl_->publish(pcl_msg);
   }
 
   //Linspace function
@@ -318,8 +330,10 @@ public:
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "msis_pcl_node");
-  ImageConverter ic;
-  ros::spin();
+  rclcpp::init(argc, argv);
+  auto ic = std::make_shared<MSIS_PCL>();
+  rclcpp::spin(ic);
+
+  rclcpp::shutdown();
   return 0;
 }
