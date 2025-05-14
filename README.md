@@ -14,5 +14,5 @@ or <br>
 ```msis_pcl.launch.py``` launches the node with the param file ```params.yaml``` 
 
 ## Config
-enable whether the source is simulation (stonefish) or BlueRobotics Ping360. Recommended to use along with [Ping360 ROS1 Package](https://github.com/GSO-soslab/bluerobotics_ping360). 
+enable whether the source is simulation (stonefish) or BlueRobotics Ping360. Recommended to use along with [Ping360 ROS Package](https://github.com/GSO-soslab/bluerobotics_ping360). 
 
