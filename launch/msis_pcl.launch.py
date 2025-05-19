@@ -22,9 +22,9 @@ def generate_launch_description():
         package='msis_pcl',
         executable='msis_pcl',
         name='msis_pcl_node',
-        namespace="alpha",
+        namespace="alpha_rise",
         output='screen',
-        parameters=[param_config]        
+        parameters=[param_config, {'use_sim_time': True}]        
     )
 
     ld.add_action(node)

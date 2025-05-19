@@ -1,4 +1,4 @@
-/alpha/msis_pcl_node:
+/alpha_rise/msis_pcl_node:
   ros__parameters:
     stonefish: 
       enabled: true
@@ -7,8 +7,8 @@
       number_of_bins: 100
       # frame: "wamv/msis"
       frame: "alpha_rise/ping360_link_sf"
-      sub_topic: "msis/stonefish/data/image"
-      pub_topic: "msis/stonefish/data/pointcloud"
+      sub_topic: "stonefish/msis/data/image"
+      pub_topic: "stonefish/msis/data/pointcloud"
 
     ping360:
       frame: "alpha_rise/ping360_link"
