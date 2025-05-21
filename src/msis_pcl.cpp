@@ -197,7 +197,6 @@ public:
 
     //Msg header
     pcl_msg.header = std_msgs::msg::Header();
-    pcl_msg.header.stamp = this->get_clock()->now();
     pcl_msg.header.frame_id = this->frame_id;
 
     pcl_msg.height = 1;
